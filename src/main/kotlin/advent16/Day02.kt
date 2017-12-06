@@ -1,10 +1,17 @@
 package advent16
 
+import advent16.Day02.Move.D
+import advent16.Day02.Move.L
+import advent16.Day02.Move.R
+import advent16.Day02.Move.U
+import advent16.Day02.Move.valueOf
+
 /**
  * Created by joey on 3/10/17.
  */
 object Day02 {
-    private val copypasta = """
+
+/*
 --- Day 2: Bathroom Security ---
 
 You arrive at Easter Bunny Headquarters under cover of darkness. However, you left in such a rush that you forgot to use the bathroom!
@@ -37,5 +44,261 @@ So, in this example, the bathroom code is 1985.
 
 Your puzzle input is the instructions from the document you found at the front desk. What is the bathroom code?
 
-"""
+*/
+
+    enum class Move { U, D, L, R }
+
+    sealed class KeypadNum(private val num: Int) {
+        abstract fun go(m: Move): KeypadNum
+        override fun toString(): String = num.toString()
+
+        object ONE : KeypadNum(1) {
+            override fun go(m: Move) = when (m) {
+                D -> FOUR
+                R -> TWO
+                else -> ONE
+            }
+        }
+
+        object TWO : KeypadNum(2) {
+            override fun go(m: Move) = when (m) {
+                U -> TWO
+                D -> FIVE
+                L -> ONE
+                R -> THREE
+            }
+        }
+
+        object THREE : KeypadNum(3) {
+            override fun go(m: Move) = when (m) {
+                D -> SIX
+                L -> TWO
+                else -> THREE
+            }
+        }
+
+        object FOUR : KeypadNum(4) {
+            override fun go(m: Move) = when (m) {
+                U -> ONE
+                D -> SEVEN
+                L -> FOUR
+                R -> FIVE
+            }
+        }
+
+        object FIVE : KeypadNum(5) {
+            override fun go(m: Move) = when (m) {
+                U -> TWO
+                D -> EIGHT
+                L -> FOUR
+                R -> SIX
+            }
+        }
+
+        object SIX : KeypadNum(6) {
+            override fun go(m: Move) = when (m) {
+                U -> THREE
+                D -> NINE
+                L -> FIVE
+                R -> SIX
+            }
+        }
+
+        object SEVEN : KeypadNum(7) {
+            override fun go(m: Move) = when (m) {
+                U -> FOUR
+                R -> EIGHT
+                else -> SEVEN
+            }
+        }
+
+        object EIGHT : KeypadNum(8) {
+            override fun go(m: Move) = when (m) {
+                U -> FIVE
+                D -> EIGHT
+                L -> SEVEN
+                R -> NINE
+            }
+        }
+
+        object NINE : KeypadNum(9) {
+            override fun go(m: Move) = when (m) {
+                U -> SIX
+                L -> EIGHT
+                else -> NINE
+            }
+        }
+    }
+
+    val input: List<String> by lazy { FileUtil.resourceToList("input02.txt") }
+
+    fun parseMoves(line: String): List<Move> = line.map { valueOf(it.toString()) }
+
+    fun finalMove(start: KeypadNum, moves: List<Move>): KeypadNum {
+        var curr = start
+        moves.forEach { curr = curr.go(it) }
+        return curr
+    }
+
+    fun answer(): String {
+        val sb = StringBuilder()
+        var start: KeypadNum = KeypadNum.FIVE
+        input.forEach { line ->
+            val moves = parseMoves(line)
+            val final = finalMove(start, moves)
+            sb.append(final.toString())
+            start = final
+        }
+        return sb.toString()
+    }
+
+    /*
+--- Part Two ---
+
+You finally arrive at the bathroom (it's a several minute walk from the lobby so visitors can behold the many fancy conference rooms and water coolers on this floor) and go to punch in the code. Much to your bladder's dismay, the keypad is not at all like you imagined it. Instead, you are confronted with the result of hundreds of man-hours of bathroom-keypad-design meetings:
+
+    1
+  2 3 4
+5 6 7 8 9
+  A B C
+    D
+You still start at "5" and stop when you're at an edge, but given the same instructions as above, the outcome is very different:
+
+You start at "5" and don't move at all (up and left are both edges), ending at 5.
+Continuing from "5", you move right twice and down three times (through "6", "7", "B", "D", "D"), ending at D.
+Then, from "D", you move five more times (through "D", "B", "C", "C", "B"), ending at B.
+Finally, after five more moves, you end at 3.
+So, given the actual keypad layout, the code would be 5DB3.
+
+Using the same instructions in your puzzle input, what is the correct bathroom code?
+
+     */
+
+    fun finalMove2(start: KeypadChar, moves: List<Move>): KeypadChar {
+        var curr = start
+        moves.forEach { curr = curr.go(it) }
+        return curr
+    }
+
+    fun answer2(): String {
+        val sb = StringBuilder()
+        var start: KeypadChar = KeypadChar.FIVE
+        input.forEach { line ->
+            val moves = parseMoves(line)
+            val final = finalMove2(start, moves)
+            sb.append(final.toString())
+            start = final
+        }
+        return sb.toString()
+    }
+
+    sealed class KeypadChar(private val key: Char) {
+        override fun toString() = key.toString()
+        abstract fun go(m: Move): KeypadChar
+
+        object ONE : KeypadChar('1') {
+            override fun go(m: Move) = when (m) {
+                D -> THREE
+                else -> ONE
+            }
+        }
+
+        object TWO : KeypadChar('2') {
+            override fun go(m: Move) = when (m) {
+                D -> SIX
+                R -> THREE
+                else -> TWO
+            }
+        }
+
+        object THREE : KeypadChar('3') {
+            override fun go(m: Move) = when (m) {
+                U -> ONE
+                D -> SEVEN
+                L -> TWO
+                R -> FOUR
+            }
+        }
+
+        object FOUR : KeypadChar('4') {
+            override fun go(m: Move) = when (m) {
+                D -> EIGHT
+                L -> THREE
+                else -> FOUR
+            }
+        }
+
+        object FIVE : KeypadChar('5') {
+            override fun go(m: Move) = when (m) {
+                R -> SIX
+                else -> FIVE
+            }
+        }
+
+        object SIX : KeypadChar('6') {
+            override fun go(m: Move) = when (m) {
+                U -> TWO
+                D -> A
+                L -> FIVE
+                R -> SEVEN
+            }
+        }
+
+        object SEVEN : KeypadChar('7') {
+            override fun go(m: Move) = when (m) {
+                U -> THREE
+                D -> B
+                L -> SIX
+                R -> EIGHT
+            }
+        }
+
+        object EIGHT : KeypadChar('8') {
+            override fun go(m: Move) = when (m) {
+                U -> FOUR
+                D -> C
+                L -> SEVEN
+                R -> NINE
+            }
+        }
+
+        object NINE : KeypadChar('9') {
+            override fun go(m: Move) = when (m) {
+                L -> EIGHT
+                else -> NINE
+            }
+        }
+
+        object A : KeypadChar('A') {
+            override fun go(m: Move) = when (m) {
+                U -> SIX
+                R -> B
+                else -> A
+            }
+        }
+
+        object B : KeypadChar('B') {
+            override fun go(m: Move) = when (m) {
+                U -> SEVEN
+                D -> DEE
+                L -> A
+                R -> C
+            }
+        }
+
+        object C : KeypadChar('C') {
+            override fun go(m: Move) = when (m) {
+                U -> EIGHT
+                L -> B
+                else -> C
+            }
+        }
+
+        object DEE : KeypadChar('D') {
+            override fun go(m: Move) = when (m) {
+                U -> B
+                else -> DEE
+            }
+        }
+    }
 }
