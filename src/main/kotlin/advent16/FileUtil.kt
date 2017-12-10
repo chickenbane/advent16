@@ -7,7 +7,7 @@ object FileUtil {
 
     fun resourceToString(path: String): String {
         val resource = ClassLoader.getSystemResourceAsStream(path) ?: throw IllegalArgumentException("Unable to find $path")
-        resource.reader().use { return it.readText() }
+        resource.reader().use { return it.readText().trim() }
     }
 
     fun resourceToList(path: String): List<String> {

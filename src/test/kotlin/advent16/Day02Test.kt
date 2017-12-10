@@ -13,6 +13,6 @@ class Day02Test {
     @Test
     fun answer2() {
         val answer = Day02.answer2()
-        assertEquals("my answer", "82958", answer)
+        assertEquals("my answer", "B3DB8", answer)
     }
 }
