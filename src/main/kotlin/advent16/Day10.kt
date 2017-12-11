@@ -62,7 +62,7 @@ Based on your instructions, what is the number of the bot that is responsible fo
         }
     }
 
-    fun answer(part2: Boolean = false): Int {
+    fun answer(): Answer {
         val botOps = input.map { botOp(it) }
 
         // setup bots hashmap
@@ -108,7 +108,7 @@ Based on your instructions, what is the number of the bot that is responsible fo
 
         val dos = outputs.reduce { acc, i -> acc * i }
 
-        return if (part2) dos else uno
+        return Answer(uno, dos)
     }
 
     /*
@@ -117,8 +117,10 @@ Based on your instructions, what is the number of the bot that is responsible fo
 What do you get if you multiply together the values of one chip in each of outputs 0, 1, and 2?
 
      */
-    fun answer2() = answer(true)
+
+    data class Answer(val part1: Int, val part2: Int)
 }
+
 
 internal data class Robot(val bot: BotId, val giveOp: GiveOp) {
     private val chips = ArrayList<Int>()

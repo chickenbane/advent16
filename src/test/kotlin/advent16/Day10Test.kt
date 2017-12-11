@@ -7,12 +7,7 @@ class Day10Test {
     @Test
     fun answer() {
         val answer = Day10.answer()
-        assertEquals("my answer", 141, answer)
-    }
-
-    @Test
-    fun answer2() {
-        val answer = Day10.answer2()
-        assertEquals("my answer", 1209, answer)
+        assertEquals("my part1 answer", 141, answer.part1)
+        assertEquals("my part2 answer", 1209, answer.part2)
     }
 }
