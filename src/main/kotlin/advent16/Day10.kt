@@ -101,7 +101,7 @@ Based on your instructions, what is the number of the bot that is responsible fo
                     outputs[giveLow.num] = low
                 }
                 if (giveHigh is Output && giveHigh.num < 3) {
-                    outputs[giveHigh.num] = low
+                    outputs[giveHigh.num] = high
                 }
             }
         }
