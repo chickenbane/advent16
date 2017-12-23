@@ -2,12 +2,12 @@ package advent16
 
 import advent16.Day11a.Element.HYDROGEN
 import advent16.Day11a.Element.LITHIUM
-import advent16.Day11a.ElevatorDirection.*
+import advent16.Day11a.ElevatorDirection.DOWN
+import advent16.Day11a.ElevatorDirection.UP
 import advent16.Day11a.HolderType.GENERATOR
 import advent16.Day11a.HolderType.MICROCHIP
 import advent16.Day11a.Item
 import advent16.Day11a.State
-import advent16.Day11a.move
 import advent16.Day11a.pairs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -39,14 +39,12 @@ class Day11aTest {
     //The third floor contains a lithium generator.
     //The fourth floor contains nothing relevant.
 
-    val exampleItems = setOf(
+    private val exampleState = State(1, setOf(
             Item(HYDROGEN, MICROCHIP, 1),
             Item(LITHIUM, MICROCHIP, 1),
             Item(HYDROGEN, GENERATOR, 2),
             Item(LITHIUM, GENERATOR, 3)
-    )
-
-    val exampleState = State(1, exampleItems)
+    ))
 
     @Test
     fun example() {
@@ -78,6 +76,18 @@ class Day11aTest {
     }
 
     @Test(expected = IllegalArgumentException::class)
+    fun `Move cannot have more than two items`() {
+        val allItemsOn1 = setOf(
+                Item(HYDROGEN, MICROCHIP, 1),
+                Item(LITHIUM, MICROCHIP, 1),
+                Item(HYDROGEN, GENERATOR, 1),
+                Item(LITHIUM, GENERATOR, 1)
+        )
+        val start = State(1, allItemsOn1)
+        start.move(up(Item(HYDROGEN, MICROCHIP, 1), Item(LITHIUM, MICROCHIP, 1), Item(LITHIUM, GENERATOR, 1)))
+    }
+
+    @Test(expected = IllegalArgumentException::class)
     fun `Powered chip + unpowered chip blows up`() {
         exampleState.move(up(Item(HYDROGEN, MICROCHIP, 1), Item(LITHIUM, MICROCHIP, 1)))
     }
@@ -91,22 +101,33 @@ class Day11aTest {
                 Item(LITHIUM, GENERATOR, 1)
         )
         val start = State(1, allItemsOn1)
-        start.move(Day11a.Move(UP, setOf(Item(LITHIUM, GENERATOR, 1))))
+        start.move(up(Item(LITHIUM, GENERATOR, 1)))
     }
 
     @Test(expected = IllegalArgumentException::class)
     fun `Cannot go to a floor with fried chip`() {
-        val allItemsOn1 = setOf(
+        val items = setOf(
                 Item(HYDROGEN, MICROCHIP, 2),
                 Item(LITHIUM, MICROCHIP, 2),
                 Item(HYDROGEN, GENERATOR, 1),
                 Item(LITHIUM, GENERATOR, 1)
         )
-        val start = State(1, allItemsOn1)
-        start.move(Day11a.Move(UP, setOf(Item(LITHIUM, GENERATOR, 1))))
+        val start = State(1, items)
+        start.move(up(Item(LITHIUM, GENERATOR, 1)))
     }
 
-    fun up(vararg items: Item) = Day11a.Move(UP, items.toSet())
-    fun down(vararg items: Item) = Day11a.Move(DOWN, items.toSet())
+    private fun up(vararg items: Item) = Day11a.Move(UP, items.toSet())
+    private fun down(vararg items: Item) = Day11a.Move(DOWN, items.toSet())
+
+    @Test
+    fun solveExample() {
+        val game = Day11a.Game(exampleState)
+        game.solve()
+    }
+
+    @Test
+    fun answer() {
+        val answer = Day11a.answer()
+    }
 
 }
