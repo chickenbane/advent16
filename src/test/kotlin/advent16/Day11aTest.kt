@@ -12,6 +12,7 @@ import advent16.Day11a.pairs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.util.*
 
 class Day11aTest {
 
@@ -121,13 +122,15 @@ class Day11aTest {
 
     @Test
     fun solveExample() {
-        val game = Day11a.Game(exampleState)
-        game.solve()
+        val moves = Day11a.solve(exampleState)
+        println("example moves=$moves")
+        assertEquals("example had 11 moves", 11, moves.size)
     }
 
     @Test
     fun answer() {
         val answer = Day11a.answer()
+        assertEquals("my answer", 12, answer)
     }
 
 }

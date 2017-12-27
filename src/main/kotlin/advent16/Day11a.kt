@@ -7,7 +7,7 @@ import advent16.Day11a.Element.STRONTIUM
 import advent16.Day11a.Element.THULIUM
 import advent16.Day11a.HolderType.GENERATOR
 import advent16.Day11a.HolderType.MICROCHIP
-import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.collections.LinkedHashMap
 import kotlin.collections.LinkedHashSet
 
@@ -17,6 +17,7 @@ object Day11a {
     data class Item(val element: Element, val type: HolderType, val floor: Int)
 
     enum class ElevatorDirection { UP, DOWN }
+
     data class Move(val direction: ElevatorDirection, val items: Set<Item>)
 
 
@@ -38,12 +39,10 @@ object Day11a {
     }
 
     data class State(val elevator: Int, val items: Set<Item>) {
-
         private fun nextElevator(move: Move): Int = when (move.direction) {
             ElevatorDirection.UP -> elevator + 1
             ElevatorDirection.DOWN -> elevator - 1
         }
-
 
         // True if both source and dest floors are valid after the move
         private fun validMove(move: Move): Boolean {
@@ -67,7 +66,7 @@ object Day11a {
         }
 
         fun move(move: Move): State {
-            require(validMove(move))
+            //require(validMove(move))
 
             val endElevator = nextElevator(move)
             val unmovedItems = items.filter { it !in move.items }
@@ -76,10 +75,12 @@ object Day11a {
             return State(endElevator, items)
         }
 
+        fun lowestItem(): Int = items.minBy { it.floor }!!.floor
+
         fun done() = items.all { it.floor == TOP_FLOOR }
 
         // Returns possible valid moves for the state
-        val moves: List<Move> by lazy {
+        fun moves(): List<Move> {
             val list = ArrayList<Move>()
             val pairs = items.filter { it.floor == elevator }.pairs()
 
@@ -91,7 +92,7 @@ object Day11a {
                     }
                 }
             }
-            list
+            return list
         }
 
         companion object {
@@ -99,29 +100,74 @@ object Day11a {
         }
     }
 
-    data class GameMove(val state: State, val move: Move)
+    private class FloorMoves(internal val prev: List<Move>, internal val state: State) {
+        private val next: Map<Move, State> by lazy {
+            val map = LinkedHashMap<Move, State>()
+            val moves = state.moves()
+            for (m in moves) {
+                map[m] = state.move(m)
+            }
+            map
+        }
 
-    class Game(private val initial: State) {
-        val resolved = LinkedHashMap<GameMove, State>()
+        fun isFloorDone(): Boolean {
+            val lowest = state.lowestItem()
+            return next.values.any { it.lowestItem() > lowest }
+        }
 
-        fun solve() {
-            val moves = initial.moves.map { GameMove(initial, it) }
-            val linkedList = LinkedList(moves)
-            while (linkedList.isNotEmpty()) {
-                println("linked list.size=${linkedList.size} resolved.size=${resolved.size}")
-                val gameMove = linkedList.removeFirst()
-                if (gameMove !in resolved) {
-                    val next = gameMove.state.move(gameMove.move)
-                    resolved[gameMove] = next
-                    if (!next.done()) {
-                        linkedList.addAll(next.moves.map { GameMove(next, it) })
-                    }
+        fun nextFloorMoves(): List<FloorMoves> {
+            val lowest = state.lowestItem()
+            val list = ArrayList<FloorMoves>()
+            for ((m, s) in next) {
+                if (s.lowestItem() > lowest) {
+                    val n = FloorMoves(prev + m, s)
+                    list.add(n)
                 }
             }
+            return list
+        }
+
+        fun nextMoves(): List<FloorMoves> {
+            val lowest = state.lowestItem()
+            val list = ArrayList<FloorMoves>(next.size)
+            for ((m, s) in next) {
+                // prevent going backwards
+                if (s.lowestItem() >= lowest) {
+                    val n = FloorMoves(prev + m, s)
+                    list.add(n)
+                }
+            }
+            return list
+        }
+    }
+
+    private fun FloorMoves.nextFloor(): List<FloorMoves> {
+        var tryMoves: List<FloorMoves> = listOf(this)
+        while (true) {
+            if (tryMoves.any { it.isFloorDone() }) {
+                return tryMoves.flatMap { it.nextFloorMoves() }
+            }
+            val next = tryMoves.flatMap { it.nextMoves() }
+            println("nextFloor: tried=${tryMoves.size} next=${next.size}")
+            tryMoves = next
+        }
+    }
+
+    fun solve(state: State): List<Move> {
+        var tryMoves: List<FloorMoves> = listOf(FloorMoves(listOf(), state))
+        while (true) {
+            val solved = tryMoves.filter { it.state.done() }
+            if (solved.isNotEmpty()) {
+                return solved.minBy { it.prev.size }!!.prev
+            }
+            val nextMoves = tryMoves.flatMap { it.nextFloor() }
+            println("solve: tried=${tryMoves.size} next=${nextMoves.size}")
+            tryMoves = nextMoves
         }
     }
 
     fun answer(): Int {
+
         //The first floor contains a strontium generator, a strontium-compatible microchip, a plutonium generator, and a plutonium-compatible microchip.
         //The second floor contains a thulium generator, a ruthenium generator, a ruthenium-compatible microchip, a curium generator, and a curium-compatible microchip.
         //The third floor contains a thulium-compatible microchip.
@@ -140,9 +186,9 @@ object Day11a {
                 Item(THULIUM, MICROCHIP, 3)
         ))
 
-        val game = Game(initial)
-        game.solve()
-        return 1
+        val moves = solve(initial)
+        println("moves=$moves")
+        return moves.size
     }
 
 }
