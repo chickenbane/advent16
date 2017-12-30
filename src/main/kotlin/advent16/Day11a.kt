@@ -45,7 +45,7 @@ object Day11a {
         }
 
         // True if both source and dest floors are valid after the move
-        private fun validMove(move: Move): Boolean {
+        internal fun validMove(move: Move): Boolean {
             if (elevator == 1 && move.direction == ElevatorDirection.DOWN) return false
             if (elevator == TOP_FLOOR && move.direction == ElevatorDirection.UP) return false
             require(move.items.isNotEmpty() && move.items.size <= 2)
@@ -79,6 +79,10 @@ object Day11a {
 
         fun done() = items.all { it.floor == TOP_FLOOR }
 
+        companion object {
+            private val TOP_FLOOR = 4
+        }
+
         // Returns possible valid moves for the state
         fun moves(): List<Move> {
             val list = ArrayList<Move>()
@@ -94,16 +98,87 @@ object Day11a {
             }
             return list
         }
-
-        companion object {
-            private val TOP_FLOOR = 4
-        }
     }
 
     private class FloorMoves(internal val prev: List<Move>, internal val state: State) {
+
+        // one or two items up, and one or two items down
+        // either both items are the same element, or they are different
+        // but no need to differentiate between a hydrogen generator up vs lithium generator up
+        private fun moves(): List<Move> {
+
+            // returns the 'powered' elements, both microchip and generator are present
+            fun List<Item>.poweredElements(): List<Element> {
+                val chips = filter { it.type == HolderType.MICROCHIP }.map { it.element }
+                val generators = filter { it.type == GENERATOR }.map { it.element }.toSet()
+                return chips.filter { it in generators }
+            }
+
+            val floorItems = state.items.filter { it.floor == state.elevator }
+            val poweredElements = floorItems.poweredElements()
+            val unpoweredItems = floorItems.filter { it.element !in poweredElements }
+
+            val powered: List<Item> = if (poweredElements.isEmpty()) {
+                listOf()
+            } else {
+                val e = poweredElements.first()
+                listOf(Item(e, GENERATOR, state.elevator), Item(e, MICROCHIP, state.elevator))
+            }
+            val moveItems: List<Item> = unpoweredItems + powered
+            val pairs: Set<Set<Item>> = moveItems.pairs()
+
+            val upMoves = ArrayList<Move>()
+            pairs.forEach {
+                val m = Move(ElevatorDirection.UP, it)
+                if (state.validMove(m)) {
+                    upMoves.add(m)
+                }
+            }
+            val list = ArrayList<Move>()
+            // if we can bring two items up, filter moves that only bring one
+            val upMoves2 = upMoves.filter { it.items.size == 2 }
+            if (upMoves2.isEmpty()) {
+                list.addAll(upMoves)
+            } else {
+                list.addAll(upMoves2)
+            }
+
+            // prevent going backwards
+            val lowestItem = state.lowestItem()
+            if (state.elevator > lowestItem) {
+                val downMoves = ArrayList<Move>()
+                pairs.forEach {
+                    val m = Move(ElevatorDirection.DOWN, it)
+                    if (state.validMove(m)) {
+                        downMoves.add(m)
+                    }
+                }
+
+                // if we can bring down one item, filter moves that bring down two
+                val downMoves1 = downMoves.filter { it.items.size == 1}
+                if (downMoves1.isEmpty()) {
+                    list.addAll(downMoves)
+                } else {
+                    list.addAll(downMoves1)
+                }
+            }
+
+            return list
+        }
+
         private val next: Map<Move, State> by lazy {
             val map = LinkedHashMap<Move, State>()
-            val moves = state.moves()
+            val moves = moves()
+            /*
+            val oldMoves = state.moves()
+            val diff = moves.size - oldMoves.size
+            if (diff > 0) {
+                println("new moves is greater, moves=$moves oldMoves=$oldMoves")
+            } else if (diff != 0) {
+                println("new moves has this many less diff=$diff size=${moves.size}")
+            }
+            */
+            require(moves.isNotEmpty()) { "this doesn't provide moves state=$state" }
             for (m in moves) {
                 map[m] = state.move(m)
             }
@@ -127,15 +202,13 @@ object Day11a {
             return list
         }
 
+        val nextSize: Int = next.size
+
         fun nextMoves(): List<FloorMoves> {
-            val lowest = state.lowestItem()
             val list = ArrayList<FloorMoves>(next.size)
             for ((m, s) in next) {
-                // prevent going backwards
-                if (s.lowestItem() >= lowest) {
-                    val n = FloorMoves(prev + m, s)
-                    list.add(n)
-                }
+                val n = FloorMoves(prev + m, s)
+                list.add(n)
             }
             return list
         }
@@ -147,9 +220,16 @@ object Day11a {
             if (tryMoves.any { it.isFloorDone() }) {
                 return tryMoves.flatMap { it.nextFloorMoves() }
             }
-            val next = tryMoves.flatMap { it.nextMoves() }
+            val size = tryMoves.sumBy { it.nextSize }
+            println("nextFloor: tried=${tryMoves.size} next=$size")
+
+            tryMoves = tryMoves.flatMapTo(ArrayList(size)) { it.nextMoves() }
+            // TODO must filter equivalent states
+            /*
+            val next = tryMoves.flatMapTo(ArrayList(size)) { it.nextMoves() }
             println("nextFloor: tried=${tryMoves.size} next=${next.size}")
             tryMoves = next
+            */
         }
     }
 

@@ -12,7 +12,6 @@ import advent16.Day11a.pairs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.*
 
 class Day11aTest {
 
