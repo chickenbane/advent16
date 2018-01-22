@@ -7,9 +7,6 @@ import advent16.Day11a.Element.STRONTIUM
 import advent16.Day11a.Element.THULIUM
 import advent16.Day11a.HolderType.GENERATOR
 import advent16.Day11a.HolderType.MICROCHIP
-import kotlin.collections.ArrayList
-import kotlin.collections.LinkedHashMap
-import kotlin.collections.LinkedHashSet
 
 object Day11a {
     enum class Element { HYDROGEN, LITHIUM, STRONTIUM, PLUTONIUM, THULIUM, RUTHENIUM, CURIUM }
@@ -66,7 +63,7 @@ object Day11a {
         }
 
         fun move(move: Move): State {
-            //require(validMove(move))
+            require(validMove(move))
 
             val endElevator = nextElevator(move)
             val unmovedItems = items.filter { it !in move.items }
@@ -80,23 +77,27 @@ object Day11a {
         fun done() = items.all { it.floor == TOP_FLOOR }
 
         companion object {
-            private val TOP_FLOOR = 4
+            internal val TOP_FLOOR = 4
         }
+    }
 
-        // Returns possible valid moves for the state
-        fun moves(): List<Move> {
-            val list = ArrayList<Move>()
-            val pairs = items.filter { it.floor == elevator }.pairs()
-
-            ElevatorDirection.values().forEach { dir ->
-                pairs.forEach {
-                    val m = Move(dir, it)
-                    if (validMove(m)) {
-                        list.add(m)
+    data class SimpleFloorItems(val chips: Int, val generators: Int, val both: Int, val floor: Int)
+    data class SimpleState(val elevator: Int, val floorItems: Set<SimpleFloorItems>) {
+        companion object {
+            fun from(state: State): SimpleState {
+                val set = LinkedHashSet<SimpleFloorItems>()
+                for (f in 1..State.TOP_FLOOR) {
+                    val floorItems = state.items.filter { it.floor == f }
+                    if (floorItems.isNotEmpty()) {
+                        val chipItems = floorItems.filter { it.type == MICROCHIP }
+                        val chipElements = chipItems.map { it.element }.toSet()
+                        val genItems = floorItems.filter { it.type == GENERATOR }
+                        val both = genItems.filter { it.element in chipElements }.size
+                        set.add(SimpleFloorItems(chipItems.size - both, genItems.size - both, both, f))
                     }
                 }
+                return SimpleState(state.elevator, set)
             }
-            return list
         }
     }
 
@@ -155,7 +156,7 @@ object Day11a {
                 }
 
                 // if we can bring down one item, filter moves that bring down two
-                val downMoves1 = downMoves.filter { it.items.size == 1}
+                val downMoves1 = downMoves.filter { it.items.size == 1 }
                 if (downMoves1.isEmpty()) {
                     list.addAll(downMoves)
                 } else {
@@ -169,15 +170,6 @@ object Day11a {
         private val next: Map<Move, State> by lazy {
             val map = LinkedHashMap<Move, State>()
             val moves = moves()
-            /*
-            val oldMoves = state.moves()
-            val diff = moves.size - oldMoves.size
-            if (diff > 0) {
-                println("new moves is greater, moves=$moves oldMoves=$oldMoves")
-            } else if (diff != 0) {
-                println("new moves has this many less diff=$diff size=${moves.size}")
-            }
-            */
             require(moves.isNotEmpty()) { "this doesn't provide moves state=$state" }
             for (m in moves) {
                 map[m] = state.move(m)
@@ -191,6 +183,7 @@ object Day11a {
         }
 
         fun nextFloorMoves(): List<FloorMoves> {
+            //if (state.done()) return listOf(this)
             val lowest = state.lowestItem()
             val list = ArrayList<FloorMoves>()
             for ((m, s) in next) {
@@ -221,15 +214,27 @@ object Day11a {
                 return tryMoves.flatMap { it.nextFloorMoves() }
             }
             val size = tryMoves.sumBy { it.nextSize }
-            println("nextFloor: tried=${tryMoves.size} next=$size")
+            val triedSize = tryMoves.size
 
             tryMoves = tryMoves.flatMapTo(ArrayList(size)) { it.nextMoves() }
-            // TODO must filter equivalent states
-            /*
-            val next = tryMoves.flatMapTo(ArrayList(size)) { it.nextMoves() }
-            println("nextFloor: tried=${tryMoves.size} next=${next.size}")
-            tryMoves = next
-            */
+
+            if (tryMoves.size > 100_000) {
+
+                // prune states that are functionally identical
+                val map = LinkedHashMap<SimpleState, FloorMoves>()
+                tryMoves.forEach {
+                    val simple = SimpleState.from(it.state)
+                    val prev = map[simple]
+                    // if two states are identical, take the one with less moves
+                    if (prev == null || it.prev.size < prev.prev.size) {
+                        map[simple] = it
+                    }
+                }
+                val next = map.values.toList()
+
+                tryMoves = next
+            }
+            println("nextFloor: tried=$triedSize next=${tryMoves.size} from=$size")
         }
     }
 
